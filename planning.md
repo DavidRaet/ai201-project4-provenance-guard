@@ -101,9 +101,21 @@ Labels must be written in plain language a non-technical reader can understand. 
 
 ### Workflow Steps
 
+1. Creator submits a `POST /appeal` request with `content_id` and a `reasoning` field (free text, required).
+2. System updates the content record's `status` field from `"classified"` → `"under_review"`.
+3. Appeal is appended to the audit log as a new entry linked to the original `content_id`, with its own timestamp.
+4. Reviewers should be able to see the content_id and reasoning of the creator's appeal through the GET /log endpoint. 
 
 ### Anticipated Edge Cases
 
+**Edge Case 1 - Missing `reasoning` field:**
+An appeal submitted without a `reasoning` value must be rejected with a `400 Bad Request` and a message like `"Appeal must include your reasoning."` The spec requires creator reasoning to be captured; empty appeals are not meaningful.
+
+**Edge Case 2 - Appealing content that was never classified:**
+If a `content_id` is submitted that does not exist in the system, the endpoint must return `404 Not Found` rather than silently creating a dangling appeal record in the log.
+
+**Edge Case 3 - Duplicate appeals:**
+If a creator submits a second appeal for the same `content_id` while status is already `"under_review"`, the system should reject it with `409 Conflict` to prevent log pollution.
 
 ***
 
