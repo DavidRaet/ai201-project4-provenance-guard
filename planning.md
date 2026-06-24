@@ -164,13 +164,21 @@ A submission enters through the rate limiter, then fans out to both detection si
 
 ### M3 - Submission Endpoint + First Signal (LLM)
 
-**When:** 
+**When:** First implementation session, before any signal logic exists.
 
+**Spec sections provided as input:**
+- Detection Signals (Signal 1 - LLM description, output format, weight)
+- Confidence Scoring & Uncertainty (threshold table, weighted average formula)
+- Architecture diagram
 
 
 **What I will ask the AI to generate:**
+- Flask app skeleton (`app.py`) with the `POST /submit` route stubbed out
+- the `llm_signal(text: str) -> float` function that includes a Groq API call, prompt structure, and JSON score extraction
+- implement `combine_signals(s1: float, s2: float) -> float` using the weighted average with placeholder `s2 = 0.0` until reaching M4
 
 **How I will verify the output:**
+Run `llm_signal()` directly on three test inputs before wiring it into the endpoint: one clearly AI-generated passage (expected > 0.80), one personal essay excerpt (expected < 0.35), and one ambiguous mixed-voice text (expected 0.40–0.70). If the scores don't land in the expected zones, I'll revise the Groq prompt before proceeding.
 
 ***
 
