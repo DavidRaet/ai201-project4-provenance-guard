@@ -4,7 +4,7 @@
 
 Provenance Guard is a backend classification system that analyzes submitted creative text and determines whether it is likely AI-generated or human-authored. It returns a structured attribution result, confidence score, and a plain-language transparency label. Creators can appeal classifications, and all decisions are recorded in a structured audit log.
 
-**Stack:** Flask · Groq (llama-3.3-70b-versatile) · Stylometric heuristics (pure Python) · Flask-Limiter · SQLite / structured JSON (Will be decided)
+**Stack:** Flask · Groq (llama-3.3-70b-versatile) · Stylometric heuristics (pure Python) · Flask-Limiter · structured JSON 
 
 ***
 
@@ -138,7 +138,7 @@ Weighted Average]
     F --> G[label_selector
 Threshold Bucketing]
     G --> H[(Audit Log
-SQLite / JSON)]
+JSON)]
     G -->|JSON response| A
 
     A2([Creator]) -->|POST /appeal| B2[Rate Limiter]
@@ -189,7 +189,7 @@ Run `llm_signal()` directly on three test inputs before wiring it into the endpo
 **Spec sections provided as input:**
 - Detection Signals (Signal 2 with stylometric heuristics, feature list, weight)
 - Confidence Scoring & Uncertainty (threshold table, full weighted average with both signals)
-- Architecture diagram (same as M3)
+- Architecture diagram 
 
 **What I will ask the AI to generate:**
 - `stylometric_signal(text: str) -> float` metrics using type-token ratio, avg sentence length, punctuation density, function word frequency, filler phrase detection, normalized to `[0.0, 1.0]`
@@ -210,18 +210,35 @@ Do scores vary meaningfully between clearly AI and clearly human inputs? I'll ru
 
 ### M5 - Production Layer (Labels, Appeals, Audit Log)
 
-**When:** 
+**When:** After M4 scoring is validated.
 
 **Spec sections provided as input:**
-
+- Transparency Label Variants (all three label text blocks)
+- Appeals Workflow (workflow steps + edge cases)
+- Audit Log schema requirements
+- Architecture diagram
 
 **What I will ask the AI to generate:**
-
+- `format_label(label_key: str, score: float) -> dict` - returns the correct plain-language label text and variant key for the JSON response
+- `POST /appeal` endpoint - validates `content_id` and `reasoning`, updates status, appends appeal entry to audit log
+- `GET /log` endpoint - returns all log entries as structured JSON
 
 **How I will verify:**
+- Hit `POST /submit` with inputs that trigger each of the three label variants and confirm the returned label text matches the spec exactly.
+- Submit a valid appeal and confirm: 
+  1. The `GET /log` response shows `status: "under_review"`, 
+  2. The appeal entry is present with `reasoning` captured, 
+  3. A second appeal to the same `content_id` returns `409 Conflict`.
+- What I will likely revise: AI-generated appeal endpoints often skip the duplicate-appeal guard. I'll add that manually if it's missing.
 
 ***
 
 ## Endpoint Summary
+
+| Method | Route | Purpose |
+|---|---|---|
+| `POST` | `/submit` | Submit content for classification |
+| `POST` | `/appeal` | Submit an appeal for a classification |
+| `GET` | `/log` | Retrieve structured audit log |
 
 ***
