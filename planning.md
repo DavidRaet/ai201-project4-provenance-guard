@@ -122,6 +122,41 @@ If a creator submits a second appeal for the same `content_id` while status is a
 
 ## Architecture
 
+```mermaid
+flowchart TD
+    A([Client]) -->|POST /submit| B[Rate Limiter
+Flask-Limiter]
+    B -->|429 if exceeded| A
+    B --> C[Submission Endpoint]
+    C --> D[llm_signal
+Groq LLM]
+    C --> E[stylometric_signal
+Pure Python]
+    D --> F[combine_signals
+Weighted Average]
+    E --> F
+    F --> G[label_selector
+Threshold Bucketing]
+    G --> H[(Audit Log
+SQLite / JSON)]
+    G -->|JSON response| A
+
+    A2([Creator]) -->|POST /appeal| B2[Rate Limiter]
+    B2 -->|429 if exceeded| A2
+    B2 --> I[Appeal Endpoint]
+    I -->|404 if not found| A2
+    I -->|409 if duplicate| A2
+    I --> J[Update status:
+under_review]
+    J --> H
+
+    A3([Client]) -->|GET /log| K[Log Endpoint]
+    K --> H
+    H -->|Structured entries| A3
+```
+
+A submission enters through the rate limiter, then fans out to both detection signals in parallel before scores are combined and bucketed into a transparency label. The full classification result is returned to the client and written to the audit log in a single response cycle. For appeals, they will bypasse the detection pipeline entirely: it validates the target `content_id`, updates its status to `under_review`, and appends an appeal entry to the log without triggering re-classification. The audit log is the single source of truth for both flows and every classification decision and every appeal lands there in structured form.
+
 ***
 
 ## AI Tool Plan
