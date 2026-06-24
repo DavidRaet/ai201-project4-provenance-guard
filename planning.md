@@ -187,11 +187,24 @@ Run `llm_signal()` directly on three test inputs before wiring it into the endpo
 **When:** After M3 passes manual testing.
 
 **Spec sections provided as input:**
+- Detection Signals (Signal 2 with stylometric heuristics, feature list, weight)
+- Confidence Scoring & Uncertainty (threshold table, full weighted average with both signals)
+- Architecture diagram (same as M3)
 
 **What I will ask the AI to generate:**
+- `stylometric_signal(text: str) -> float` metrics using type-token ratio, avg sentence length, punctuation density, function word frequency, filler phrase detection, normalized to `[0.0, 1.0]`
+- Updated `combine_signals()` using both signal scores at `w1=0.65`, `w2=0.35`
+- `label_selector(score: float) -> str` that maps the combined score to `AI_HIGH`, `UNCERTAIN`, or `HUMAN_HIGH` using the defined thresholds
 
 
 **What I will check:**
+Do scores vary meaningfully between clearly AI and clearly human inputs? I'll run the same three test cases from M3 through the full pipeline and verify: 
+
+- (1) the high-confidence AI input scores ≥ 0.80, 
+
+- (2) the human input scores ≤ 0.39, 
+
+- (3) the ambiguous input lands in the `UNCERTAIN` band and does not get the same label as either extreme. If two inputs produce the same label despite obviously different content, the weights need tuning before moving on.
 
 ***
 
