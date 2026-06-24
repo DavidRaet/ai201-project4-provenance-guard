@@ -35,22 +35,50 @@ Flask-Limiter returns a `429 Too Many Requests` response automatically. The resp
 }
 ```
 
-A `Retry-After` header will be included so the client knows exactly when to retry [1].
-
-***
-
-### Strategy
-
-### Chosen Limits
+A `Retry-After` header will be included so the client knows exactly when to retry.
 
 ***
 
 ## Detection Signals
 
+### Signal 1: LLM-Based Semantic Analysis (Groq w/ llama-3.3-70b-versatile)
+
+- **What it measures:** Structural and semantic patterns typical of AI-generated text along with uniform sentence rhythm, absence of idiosyncratic phrasing, over-coherent logical flow, and a tendency toward balanced hedging.
+- **What it misses:** Highly polished human writing (academic prose, edited literary fiction) can score suspiciously "AI-like." Also blind to stylistic mimicry if a user trains a model on their own voice.
+- **Output:** A probability score in `[0.0, 1.0]` where 1.0 = highly confident AI.
+
+### Signal 2: Stylometric Heuristics (Pure Python)
+
+- **What it measures:** Surface-level statistical features of the text, type-token ratio (lexical diversity), average sentence length, punctuation density, function word frequency, and presence of common AI filler phrases (e.g., "certainly," "it's worth noting").
+- **What it misses:** These are coarse proxies. A terse human writer may score similarly to AI. Non-native English writers may produce stylometric profiles that skew the score.
+- **Output:** A normalized score in `[0.0, 1.0]` where 1.0 = highly AI-like stylometric profile.
+
 ### Signal Combination
+
+Signals are combined as a **weighted average**:
+
+```
+confidence_score = (w1 * signal_1_score) + (w2 * signal_2_score)
+```
+
+Initial weights: `w1 = 0.65` (LLM signal), `w2 = 0.35` (stylometric). The LLM signal is weighted higher because it captures deeper semantic structure; stylometrics serve as a fast, explainable cross-check. Weights may be adjusted after validation testing.
 
 ***
 
+## Confidence Scoring & Uncertainty Representation
+
+
+The combined `confidence_score` is a float in `[0.0, 1.0]`. Score interpretation is bucketed into three ranges:
+
+| Score Range | Classification | Label Variant |
+|---|---|---|
+| `0.80 – 1.00` | High-confidence AI | `"AI_HIGH"` |
+| `0.40 – 0.79` | Uncertain | `"UNCERTAIN"` |
+| `0.00 – 0.39` | High-confidence Human | `"HUMAN_HIGH"` |
+
+**Validation approach:** At least two test submissions will be run; one clearly AI-generated passage (expected score > 0.80) and one handwritten personal essay excerpt (expected score < 0.35) in order to confirm the thresholds produce meaningfully distinct outputs before accepting them.
+
+***
 ## Transparency Label Variants
 
 ***
