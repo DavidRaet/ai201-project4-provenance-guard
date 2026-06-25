@@ -1,8 +1,35 @@
 import uuid
 
+from dotenv import load_dotenv
 from flask import Flask, jsonify, request
+from flask_limiter import Limiter
+from flask_limiter.errors import RateLimitExceeded
+from flask_limiter.util import get_remote_address
+
+from signals import llm_signal, combine_signals, label_selector
+
+load_dotenv()
 
 app = Flask(__name__)
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri="memory://",
+)
+
+
+@app.errorhandler(RateLimitExceeded)
+def handle_rate_limit(e):
+    return (
+        jsonify(
+            {
+                "error": "Rate limit exceeded. Try again in 60 seconds.",
+                "status": 429,
+            }
+        ),
+        429,
+    )
 
 
 @app.route("/")
@@ -15,25 +42,34 @@ def get_log():
     return jsonify({"logs": {}})
 
 
+@app.route("/submit", methods=["POST"])
+@limiter.limit("10 per minute")
 def submit():
     data = request.get_json()
     if data is None:
         return jsonify({"error": "Invalid or missing JSON payload."}), 400
 
     text = data.get("text")
-    creator_id = data.get("creator_id")
 
-    if not text or not creator_id:
-        return jsonify(
-            {"error": "Missing required fields: 'text' and 'creator_id'"}
-        ), 400
+    if not text or not isinstance(text, str) or not text.strip():
+        return (
+            jsonify(
+                {"error": "Missing required field: 'text' must be a non-empty string."}
+            ),
+            400,
+        )
+
+    s1 = llm_signal(text)
+    confidence_score = combine_signals(s1, 0.0)
+    label = label_selector(confidence_score)
 
     return jsonify(
         {
             "content_id": str(uuid.uuid4()),
-            "attribution": "uncertain",
-            "confidence": 0.5,
-            "label": "We're not sure who wrote this.",
+            "confidence_score": round(confidence_score, 4),
+            "label_key": label["label_key"],
+            "label_text": label["label_text"],
+            "label_detail": label["label_detail"],
         }
     )
 
