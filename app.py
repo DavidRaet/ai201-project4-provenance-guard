@@ -6,7 +6,7 @@ from flask_limiter import Limiter
 from flask_limiter.errors import RateLimitExceeded
 from flask_limiter.util import get_remote_address
 
-from signals import llm_signal, combine_signals, label_selector
+from signals import llm_signal, stylometric_signal, combine_signals, label_selector
 
 load_dotenv()
 
@@ -59,8 +59,9 @@ def submit():
             400,
         )
 
-    s1 = llm_signal(text)
-    confidence_score = combine_signals(s1, 0.0)
+    llm_sig = llm_signal(text)
+    stylo_signal = stylometric_signal(text)
+    confidence_score = combine_signals(llm_sig, stylo_signal)
     label = label_selector(confidence_score)
 
     return jsonify(
