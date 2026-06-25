@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
@@ -17,6 +18,9 @@ limiter = Limiter(
     default_limits=[],
     storage_uri="memory://",
 )
+
+audit_log = []       # chronological list of all classification and appeal entries
+content_status = {}  # content_id → "classified" | "under_review"
 
 
 @app.errorhandler(RateLimitExceeded)
@@ -38,8 +42,9 @@ def home():
 
 
 @app.route("/log", methods=["GET"])
+@limiter.limit("30 per minute")
 def get_log():
-    return jsonify({"logs": {}})
+    return jsonify(audit_log)
 
 
 @app.route("/submit", methods=["POST"])
@@ -64,9 +69,23 @@ def submit():
     confidence_score = combine_signals(llm_sig, stylo_signal)
     label = label_selector(confidence_score)
 
+    content_id = str(uuid.uuid4())
+    timestamp = datetime.now(timezone.utc).isoformat()
+
+    audit_log.append(
+        {
+            "content_id": content_id,
+            "timestamp": timestamp,
+            "type": "classification",
+            "confidence_score": round(confidence_score, 4),
+            "label_key": label["label_key"],
+        }
+    )
+    content_status[content_id] = "classified"
+
     return jsonify(
         {
-            "content_id": str(uuid.uuid4()),
+            "content_id": content_id,
             "confidence_score": round(confidence_score, 4),
             "label_key": label["label_key"],
             "label_text": label["label_text"],
@@ -76,6 +95,7 @@ def submit():
 
 
 @app.route("/appeal", methods=["POST"])
+@limiter.limit("5 per minute")
 def appeal():
     data = request.get_json()
     if data is None:
@@ -84,10 +104,28 @@ def appeal():
     content_id = data.get("content_id")
     reasoning = data.get("reasoning")
 
-    if not content_id or not reasoning:
-        return jsonify(
-            {"error": "Missing required fields: 'content_id' and 'reasoning'"}
-        ), 400
+    if not reasoning or not isinstance(reasoning, str) or not reasoning.strip():
+        return jsonify({"error": "Missing required field: 'reasoning' must be a non-empty string."}), 400
+
+    if not content_id:
+        return jsonify({"error": "Missing required field: 'content_id'."}), 400
+
+    if content_id not in content_status:
+        return jsonify({"error": f"Content ID '{content_id}' not found."}), 404
+
+    if content_status[content_id] == "under_review":
+        return jsonify({"error": "An appeal for this content is already under review."}), 409
+
+    content_status[content_id] = "under_review"
+    audit_log.append(
+        {
+            "content_id": content_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "type": "appeal",
+            "status": "under_review",
+            "reasoning": reasoning,
+        }
+    )
 
     return jsonify(
         {
