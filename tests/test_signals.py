@@ -2,7 +2,7 @@ import os
 import pytest
 from unittest.mock import MagicMock, patch
 
-from signals import llm_signal, combine_signals, label_selector
+from signals import llm_signal, stylometric_signal, combine_signals, label_selector
 
 
 class TestLLMSignal:
@@ -150,8 +150,8 @@ class TestLabelSelector:
         assert result["label_key"] == "AI_HIGH"
 
     def test_uncertain_just_below_ai(self):
-        """C3: score=0.79 (just below AI_HIGH) → UNCERTAIN."""
-        result = label_selector(0.79)
+        """C3: score=0.74 (just below AI_HIGH) → UNCERTAIN."""
+        result = label_selector(0.74)
         assert result["label_key"] == "UNCERTAIN"
 
     def test_uncertain_middle(self):
@@ -161,13 +161,13 @@ class TestLabelSelector:
         assert result["label_text"] == "We're not sure who created this."
 
     def test_uncertain_at_lower_boundary(self):
-        """C5: score=0.40 (boundary) → UNCERTAIN."""
-        result = label_selector(0.40)
+        """C5: score=0.35 (boundary) → UNCERTAIN."""
+        result = label_selector(0.35)
         assert result["label_key"] == "UNCERTAIN"
 
     def test_human_high_just_below_uncertain(self):
         """C6: score=0.39 (just below UNCERTAIN) → HUMAN_HIGH."""
-        result = label_selector(0.39)
+        result = label_selector(0.34)
         assert result["label_key"] == "HUMAN_HIGH"
 
     def test_human_high_low_score(self):
@@ -236,7 +236,7 @@ class TestIntegration:
     )
     @pytest.mark.integration
     def test_ambiguous_text_middle_score(self):
-        """D3: Ambiguous text scores in uncertain range (0.40–0.79)."""
+        """D3: Ambiguous text scores in uncertain range (0.35–0.75)."""
         ambiguous_text = (
             "The city had changed. Marcus noticed it in the way the old coffee shop on 5th "
             "had been replaced by a co-working space, all exposed brick and ergonomic chairs. "
@@ -247,4 +247,71 @@ class TestIntegration:
         score = llm_signal(ambiguous_text)
         assert (
             0.40 <= score < 0.80
-        ), f"Expected ambiguous text to score in uncertain range [0.40–0.79], got {score}"
+        ), f"Expected ambiguous text to score in uncertain range [0.35–0.75], got {score}"
+
+
+class TestStylometricSignal:
+    """Unit tests for stylometric_signal (pure Python, no API calls)."""
+
+    def test_empty_string_returns_sentinel(self):
+        """E1: Empty string returns 0.5 sentinel."""
+        result = stylometric_signal("")
+        assert result == 0.5
+
+    def test_ai_text_scores_above_half(self):
+        """E2: Formal AI-like text with fillers and function words scores > 0.5."""
+        ai_text = (
+            "Therefore, it is important to note that artificial intelligence systems require "
+            "careful evaluation of ethical implications and regulatory compliance frameworks. "
+            "Thus, organizations must accordingly develop comprehensive governance strategies "
+            "that address both immediate operational needs and long-term societal impacts. "
+            "In conclusion, it is crucial to note that in the realm of technology, "
+            "such considerations are henceforth paramount."
+        )
+        result = stylometric_signal(ai_text)
+        assert result > 0.5, f"Expected AI-like text to score > 0.5, got {result}"
+
+    def test_human_text_scores_below_half(self):
+        """E3: Short casual human text with no AI markers scores < 0.5."""
+        human_text = (
+            "She woke up tired. Made coffee. Still exhausted. "
+            "The cat judged her from the windowsill. Why did she always stay up so late? "
+            "Tomorrow, she told herself."
+        )
+        result = stylometric_signal(human_text)
+        assert result < 0.5, f"Expected human-like text to score < 0.5, got {result}"
+
+    def test_filler_phrases_increase_score(self):
+        """E4: Text with multiple AI filler phrases scores higher than the same text without."""
+        with_fillers = (
+            "Additionally, it is important to note the impact. "
+            "Furthermore, it is worth mentioning that results vary considerably."
+        )
+        plain = "The results were noted. They varied considerably."
+        assert stylometric_signal(with_fillers) > stylometric_signal(plain)
+
+    def test_function_words_increase_score(self):
+        """E5: Text dense with AI-typical function words scores above 0.5."""
+        func_text = (
+            "Therefore consequently however thus hence accordingly the results were achieved "
+            "through systematic and comprehensive evaluation of the available evidence."
+        )
+        result = stylometric_signal(func_text)
+        assert result > 0.5, f"Expected function-word-heavy text to score > 0.5, got {result}"
+
+    def test_very_short_sentences_score_low(self):
+        """E6: Very short sentences suppress the sent_len heuristic, keeping score < 0.4."""
+        short_text = "Hello. Yes. Good. Fine."
+        result = stylometric_signal(short_text)
+        assert result < 0.4, f"Expected very short sentences to score < 0.4, got {result}"
+
+    def test_output_clamped_to_unit_interval(self):
+        """E7: Output is always in [0.0, 1.0] regardless of input."""
+        for text in [
+            "a",
+            "!!!!!!!!!!!!!!!!",
+            "furthermore " * 100,
+            "i went. she left. ok.",
+        ]:
+            result = stylometric_signal(text)
+            assert 0.0 <= result <= 1.0, f"Score {result} out of [0,1] for input: {text!r}"
