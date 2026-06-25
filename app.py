@@ -72,6 +72,7 @@ def submit():
     content_id = str(uuid.uuid4())
     timestamp = datetime.now(timezone.utc).isoformat()
 
+    content_status[content_id] = "classified"
     audit_log.append(
         {
             "content_id": content_id,
@@ -79,9 +80,9 @@ def submit():
             "type": "classification",
             "confidence_score": round(confidence_score, 4),
             "label_key": label["label_key"],
+            "status": content_status[content_id]
         }
     )
-    content_status[content_id] = "classified"
 
     return jsonify(
         {
@@ -90,6 +91,7 @@ def submit():
             "label_key": label["label_key"],
             "label_text": label["label_text"],
             "label_detail": label["label_detail"],
+            "status": content_status[content_id]
         }
     )
 
@@ -122,7 +124,7 @@ def appeal():
             "content_id": content_id,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "type": "appeal",
-            "status": "under_review",
+            "status": content_status[content_id],
             "reasoning": reasoning,
         }
     )
@@ -130,7 +132,7 @@ def appeal():
     return jsonify(
         {
             "content_id": content_id,
-            "status": "under_review",
+            "status": content_status[content_id],
             "message": "Your appeal was received and is under review.",
         }
     )
