@@ -19,6 +19,11 @@
 
 ***
 
+## Video Walkthrough 
+
+[![Video Preview](https://s2.ezgif.com/tmp/ezgif-2ec01b9783f9e1c4.gif)](https://screenapp.io/app/v/31k3WqpHSf)
+
+
 ## Architecture Overview
 
 A submission enters through the rate limiter, then fans out to both detection signals in parallel. Scores are combined via weighted average and bucketed into a transparency label. The full classification result is returned to the client and written to the audit log in a single response cycle.
