@@ -91,7 +91,9 @@ def submit():
             "label_key": label["label_key"],
             "label_text": label["label_text"],
             "label_detail": label["label_detail"],
-            "status": content_status[content_id]
+            "status": content_status[content_id],
+            "llm_sig": llm_sig,
+            "stylo_signal": stylo_signal
         }
     )
 

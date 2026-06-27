@@ -7,22 +7,25 @@ BASE_URL = "http://localhost:5000"
 
 # Test 1: AI text
 ai_text = (
-    "Discipline is the sustained execution of chosen behavior independent of mood, motivation, or circumstance."
-    "When high performers say 'be disciplined,' they're not describing rigid self-punishment — they're pointing to a kind of internal governance that operates below the noise of feeling."
-    "Philosophically, it sits at the intersection of autonomy (the capacity to act from principle) and identity (becoming the kind of person for whom certain actions are non-negotiable)."
-    "So discipline is less about force and more about architecture — designing your environment and commitments so that the right action becomes the path of least resistance."
-    "But there's a failure mode here: discipline without reflection calcifies into rigidity, where the structure itself becomes the goal rather than what it was built to serve."
+    "The battle between Satoru Gojo and Ryomen Sukuna stands as one of the most epic and breathtaking confrontations in the history of anime and manga. "
+    "Gojo, with his unparalleled Infinity and the awe-inspiring Six Eyes, represents the pinnacle of jujutsu sorcery in the modern era. "
+    "However, Sukuna, the King of Curses, is a formidable opponent whose raw power and tactical brilliance cannot be overstated. "
+    "This clash of titans raises fascinating questions about the nature of strength, strategy, and what it truly means to be the strongest. "
+    "Ultimately, both combatants push each other to their absolute limits, making this fight a testament to the incredible storytelling of Gege Akutami. "
     "The practice is to hold the structure firmly enough to carry you through resistance, but loosely enough to interrogate it when it stops serving growth."
     "So yes — it's showing up when you don't want to, but with enough self-awareness to know whether you're building something or just performing effort."
 )
 
 # Test 2: Human text
 human_text = (
-    "TaeKwonDo is the art of kicking and punching; dating back thousands of years ago."
-    "That was what I had initially thought when I first began my training.  "
-    "However, the more I immersed myself in the art of TaeKwonDo, the more I began to realize that there was more to TaeKwonDo than its history and combat sport. "
-    "That begs the question, “What did I learn from TaeKwonDo?” Behind all the various techniques of kicking and punching of TaeKwonDo, it taught self-improvement.  "
-    "With the five core tenets of TaeKwonDo always being recited at the end of every class: Courtesy, Integrity, Self-Control, Perseverance, and Indomitable Spirit, I began to understand that TaeKwonDo was teaching a significant lesson to be the best versions of yourselves. "
+    "Kenny is a natural liar, narcissist, but a nice and likeable guy. "
+    "He was pretty extroverted as a kid and didn't care what people thought of him. And he matured as he grew to dull out those negative personality traits.  And now as he has furthered matured to a point where he's actually self aware of his traits and how it may affect others, but still actively displays it.  "
+    "His home environment most likely and other factors such as his narcissism to crave attention. This leads to Zhen, the first person he considered to 'care about him' in this certain period of his life. "
+    "But this made him to clingy and he is now in a point of denial. He's previously said that he no longer cares about Zhen but is very clear he still does. And I feel in some sort of way he's being kind of manipulative here.  "
+    "Not to mention that whilst Kenny was in bored, Zhen and Simon were actively dating, but despite that Kenny only cared about his personal feelings, and  would attempt to isolate himself with Zhen and eventually beginning to date her. And lead Zhen to break up with Simon. "
+    "Furthermore Kenny once stated that he'd never replace Zhen. But a few weeks ago he stated he had a new 'bestie' but weren't dating. Which in my eyes seemed like a replacement. And if this point was brought up to him and he'd agreed that it was some sort of replacement he'd claim something along the lines of not letting Zhen affect him and how'd he moved on."
+    "Which is a reasonable, but the point that I'm leading into is that he actively begged her to stay. And now takes some sort of high road acting like he was somehow the bigger man, which I personally dislike.  To further clarify on what I mean on taking the high road is how he states he couldn't take her bipolar disorder and all 'the things she's done'."
+    "But despite this he clearly could take it as he begged for another chance, but now theres no chance of reignition of their relationship, now he couldn't deal with her. And in this situation where the prisoner-"
 )
 
 # Test 3: Ambiguous text
@@ -52,6 +55,8 @@ for test_name, text, expected_label in tests:
 
         print(f"\nTest: {test_name}")
         print(f"Status: {response.status_code}")
+        print(f"LLM Signal Score: {result.get('llm_sig', 'N/A')}")
+        print(f"Stylometric Signal Score: {result.get('stylo_signal', 'N/A')}")
         print(f"Confidence Score: {result.get('confidence_score', 'N/A')}")
         print(f"Label Key: {result.get('label_key', 'N/A')}")
         print(f"Label Text: {result.get('label_text', 'N/A')}")
