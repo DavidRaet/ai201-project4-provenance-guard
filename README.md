@@ -186,3 +186,89 @@ When a limit is exceeded, Flask-Limiter returns `429 Too Many Requests` with a `
 ```
 
 ***
+
+## Known Limitations
+
+
+**1. Polished human writing misclassified as AI**
+Academic prose and heavily edited literary fiction can exhibit the same surface-level uniformity (consistent sentence length, low filler-phrase count, coherent flow) that the system associates with AI generation. Both the LLM signal and the stylometric signal may score such text in the `UNCERTAIN` or `AI_HIGH` range despite being entirely human-authored. The system has no mechanism to distinguish "skilled human writer" from "language model output."
+
+**2. Classification of short texts**
+
+Short texts may not provide enough linguistic features for the system to accurately classify them as AI or human-generated. This can make classification intricate, especially when the text is concise and lacks enough information to firmly establish the typical patterns associated with either category in the stylometric analysis or for the LLM to score. 
+
+***
+
+## Spec Reflection
+
+### One way the spec helped
+
+One way that the spec helped was by providing a clear framework for the specific components of our classification system such as the LLM signal, the stylometric signal, and the combined classification logic. Along with that, the architecture diagram helped visualize the flow of data and the interactions between different components at a high level.
+
+### One way implementation diverged from the spec
+
+On the sections Milestones 3 and 4 , there is a section that mentioned the method for verifying the output, which included running the model on three test examples via test_endpoints.py. However, the actual implementation required more comprehensive testing and validation than initially outlined. On top of the three test examples, there was also test suites written like the TestLLMSignal and TestStylometricSignal inside tests/test_signals.py that tested the scoring signals individually, which helped in establishing the expected range of scores for each signal depending on the kind of content. 
+
+***
+
+## AI Usage
+
+
+### Instance 1 - Function Words and Filler Phrases Drafts
+
+**What I directed the AI to do:**
+
+Inside signals.py, I asked Claude Code to generate lists of function words and filler phrases that an LLM most commonly uses.  
+
+**What the AI produced:**
+
+In turn, it produced a two lists, _AI_FUNCTION_WORDS and _FILLER_PHRASES, which contained good chunks of the said common function words and filler phrases. 
+
+**What I revised or overrode:**
+
+Upon scrutinizing the list of phrases and words using sources like GPTZero and Grammarly,  it was found that the initial generated phrases were generating LLM patterns from when the earliest versions of it were created. So, the lists were rewritten so that the phrases and function words that were included actually reflected contemporary LLM patterns rather than the outdated ones the archaic versions used.  
+
+***
+
+### Instance 2 - LLM_Signal System Prompt Generation
+
+**What I directed the AI to do:**
+
+Inside signals.py, I asked Claude Code to generate a system prompt for guiding the LLM to it's goal to classify content.   
+
+**What the AI produced:**
+
+It initially produced an overly verbose system prompt that labeled the role it assumes, the goal, a criteria to follow, and it's expected response.
+
+**What I revised or overrode:**
+
+However, upon running this model on multiple tests, the confidence scores seemed to have converged to the uncertainty bucket ranging from 0.45-0.60. So, I changed the system prompt so that it still assumes it's role, the goal, and the expected response but removed the criteria to follow as this was the bulk of the prompt and may have been noise for the model. Consequently, when the tests were reran, the tests successfully ended with the expected buckets and score range.  
+
+***
+
+## Endpoints
+
+| Method | Route | Purpose |
+|---|---|---|
+| `POST` | `/submit` | Submit content for classification |
+| `POST` | `/appeal` | Submit an appeal for a classification |
+| `GET` | `/log` | Retrieve structured audit log |
+
+***
+
+## Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/DavidRaet/ai201-project4-provenance-guard.git
+cd ai201-project4-provenance-guard
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Set environment variables
+export GROQ_API_KEY=your_key_here
+
+# Run the application
+python run_apps.py
+```
