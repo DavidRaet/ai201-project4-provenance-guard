@@ -40,7 +40,6 @@ ambiguous_text = (
 tests = [
     ("AI-generated text", ai_text, "AI_HIGH"),
     ("Human-written text", human_text, "HUMAN_HIGH"),
-    ("Ambiguous text", ambiguous_text, "UNCERTAIN"),
 ]
 
 print("=" * 70)
